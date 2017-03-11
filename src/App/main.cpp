@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-#include "LifeCicle.hpp"
+#include "Life/LifeCicle.hpp"
 
 using namespace std;
 
