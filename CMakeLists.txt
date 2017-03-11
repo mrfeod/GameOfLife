@@ -1,14 +1,10 @@
 cmake_minimum_required (VERSION 3.5)
-project (Hello)
+project (App)
 
 set(SRC_PATH "${CMAKE_CURRENT_LIST_DIR}/src")
+set(BIN_DIR "${CMAKE_BINARY_DIR}/bin")
 
 include(${SRC_PATH}/Life/LifeCicle.cmake)
+include(${SRC_PATH}/App/App.cmake)
 
-
-set(HELLO_SOURCE_DIR ${SRC_PATH}/App)
-
-include_directories(${SRC_PATH})
-
-add_executable(Hello ${HELLO_SOURCE_DIR}/main.cpp)
-target_link_libraries(Hello LifeCicle)
+install (TARGETS App DESTINATION ${BIN_DIR})

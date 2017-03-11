@@ -50,7 +50,7 @@ public:
 			m_univers[line].resize(w);
 			m_buffer[line].resize(w);
 			for (auto& cell : m_univers[line])
-				cell = rand() % 8 == 0;
+				cell = rand() % 5 == 0;
 		});
 
 		/*for (size_t line = 0; line < m_univers.size(); ++line)
@@ -83,7 +83,7 @@ public:
 
 	void NextStep()
 	{
-		m_alive = false;
+		std::atomic<bool> alive = false;
 
 		m_univers.swap(m_buffer);
 
@@ -92,7 +92,7 @@ public:
 		par.resize(m_buffer.size());
 		for (size_t i = 0; i < par.size(); ++i)
 			par[i] = i;
-		parallel_for_each(begin(par), end(par), [this](size_t i)
+		parallel_for_each(begin(par), end(par), [this, &alive](size_t i)
 		{
 			for (size_t j = 0; j < m_buffer[0].size(); ++j)
 			{
@@ -103,11 +103,12 @@ public:
 				case 3:  cell = true; break;
 				default: cell = false;
 				}
-				if (!m_alive && cell)
-					m_alive = true;
+				if (!alive && cell)
+					alive = true;
 				m_univers[i][j] = cell;
 			}
 		});
+		m_alive = alive;
 		/*for (size_t i = 0; i < m_buffer.size(); ++i)
 		{
 			for (size_t j = 0; j < m_buffer[0].size(); ++j)

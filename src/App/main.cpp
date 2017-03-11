@@ -5,8 +5,12 @@
 #include <assert.h>
 
 #include <chrono>
+#include <thread>
+#include <mutex>
 
 #include "Life/LifeCicle.hpp"
+
+//#include "SDL.h"
 
 using namespace std;
 
@@ -26,35 +30,59 @@ void print(const LifeCicle::Univers& field)
 {
 	assert(field.size() != 0);
 	system("cls");
-	for (auto& line : field)
+	auto h = field.size();
+	auto w = field[0].size();
+	if (h > 20)
+		h = 20;
+	if (w > 20)
+		w = 20;
+	
+	for (size_t i = 0; i < h; ++i)
 	{
-		for (auto cell : line)
-			cout << (cell ? "#" : " ") << " ";
+		for (size_t j = 0; j < w; ++j)
+			cout << (field[i][j] ? "#" : " ") << " ";
 		cout << endl;
 	}
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-	const size_t size = 10000;
 	srand(static_cast<uint32_t>(time(nullptr)));
 
-	auto start = std::chrono::high_resolution_clock::now();
-	LifeCicle life(size, size);
-	auto finish = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = finish - start;
-	cout << "Init time " << elapsed.count() << endl;
-
-	do
+	std::thread lifeThread;
+	std::mutex mx;
+	std::unique_ptr<LifeCicle> life;
+	lifeThread = std::thread([&life, &mx]()
 	{
-		start = std::chrono::high_resolution_clock::now();
-		life.NextStep();
-		finish = std::chrono::high_resolution_clock::now();
-		elapsed = finish - start;
-		//print(life.State());
-		cout << life.Step() << " " << elapsed.count() << endl;
-		//sleepcp(DELAY);
-	} while (life.Alive());
+		mx.lock();
+		cout << "Hello..." << endl;
+		const size_t size = 10000;
+		life = std::make_unique<LifeCicle>(size, size);
+		cout << "Bye..." << endl;
+		mx.unlock();
+	});
+	lifeThread.detach();
+
+	while (!mx.try_lock()) {}
+	mx.unlock();
+
+	auto worker = [&life, &mx]()
+	{
+		mx.lock();
+		cout << life->Step() << endl;
+		life->NextStep();
+		mx.unlock();
+	};
+
+	while (life->Alive())
+	{
+		if (mx.try_lock())
+		{
+			mx.unlock();
+			lifeThread.swap(std::thread(worker));
+			lifeThread.detach();
+		}
+	}
 	system("pause");
 	return 0;
 }
