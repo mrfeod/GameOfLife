@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <list>
 
+#include <ppl.h>
+
 namespace
 {
 	enum Side
@@ -37,13 +39,27 @@ public:
 		assert(w > 0 && h > 0);
 		m_univers.resize(h);
 		m_buffer.resize(h);
-		for (size_t line = 0; line < m_univers.size(); ++line)
+
+		using namespace concurrency;
+		std::vector<size_t> par;
+		par.resize(m_buffer.size());
+		for (size_t i = 0; i < par.size(); ++i)
+			par[i] = i;
+		parallel_for_each(begin(par), end(par), [this,&w](size_t line)
 		{
 			m_univers[line].resize(w);
 			m_buffer[line].resize(w);
 			for (auto& cell : m_univers[line])
 				cell = rand() % 8 == 0;
-		}
+		});
+
+		/*for (size_t line = 0; line < m_univers.size(); ++line)
+		{
+			m_univers[line].resize(w);
+			m_buffer[line].resize(w);
+			for (auto& cell : m_univers[line])
+				cell = rand() % 8 == 0;
+		}*/
 
 		init();
 	}
@@ -70,7 +86,13 @@ public:
 		m_alive = false;
 
 		m_univers.swap(m_buffer);
-		for (size_t i = 0; i < m_buffer.size(); ++i)
+
+		using namespace concurrency;
+		std::vector<size_t> par;
+		par.resize(m_buffer.size());
+		for (size_t i = 0; i < par.size(); ++i)
+			par[i] = i;
+		parallel_for_each(begin(par), end(par), [this](size_t i)
 		{
 			for (size_t j = 0; j < m_buffer[0].size(); ++j)
 			{
@@ -85,7 +107,23 @@ public:
 					m_alive = true;
 				m_univers[i][j] = cell;
 			}
-		}
+		});
+		/*for (size_t i = 0; i < m_buffer.size(); ++i)
+		{
+			for (size_t j = 0; j < m_buffer[0].size(); ++j)
+			{
+				auto cell = m_buffer[i][j];
+				switch (Neighbors(i, j))
+				{
+				case 2:  break;
+				case 3:  cell = true; break;
+				default: cell = false;
+				}
+				if (!m_alive && cell)
+					m_alive = true;
+				m_univers[i][j] = cell;
+			}
+		}*/
 		++m_step;
 	}
 
