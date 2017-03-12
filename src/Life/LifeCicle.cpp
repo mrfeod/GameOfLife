@@ -50,7 +50,7 @@ public:
 			m_univers[line].resize(w);
 			m_buffer[line].resize(w);
 			for (auto& cell : m_univers[line])
-				cell = rand() % 5 == 0;
+				cell = rand() % 10 == 0;
 		});
 
 		/*for (size_t line = 0; line < m_univers.size(); ++line)
@@ -84,7 +84,6 @@ public:
 	void NextStep()
 	{
 		std::atomic<bool> alive = false;
-
 		m_univers.swap(m_buffer);
 
 		using namespace concurrency;
@@ -94,12 +93,12 @@ public:
 			par[i] = i;
 		parallel_for_each(begin(par), end(par), [this, &alive](size_t i)
 		{
+			bool cell = false;
 			for (size_t j = 0; j < m_buffer[0].size(); ++j)
 			{
-				auto cell = m_buffer[i][j];
 				switch (Neighbors(i, j))
 				{
-				case 2:  break;
+				case 2:  cell = m_buffer[i][j]; break;
 				case 3:  cell = true; break;
 				default: cell = false;
 				}
@@ -109,14 +108,16 @@ public:
 			}
 		});
 		m_alive = alive;
-		/*for (size_t i = 0; i < m_buffer.size(); ++i)
+
+		/*m_alive = false;
+		bool cell = false;
+		for (size_t i = 0; i < m_buffer.size(); ++i)
 		{
 			for (size_t j = 0; j < m_buffer[0].size(); ++j)
 			{
-				auto cell = m_buffer[i][j];
 				switch (Neighbors(i, j))
 				{
-				case 2:  break;
+				case 2:  cell = m_buffer[i][j]; break;
 				case 3:  cell = true; break;
 				default: cell = false;
 				}
