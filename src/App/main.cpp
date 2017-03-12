@@ -10,12 +10,9 @@
 
 #include "Life/LifeCicle.hpp"
 
-//#include "SDL.h"
+#include "SDL.h"
 
 using namespace std;
-
-const size_t SIZE = 50;
-const int DELAY = 100;
 
 void sleepcp(int milliseconds)
 {
@@ -47,7 +44,24 @@ void print(const LifeCicle::Univers& field)
 
 int main(int argc, char* argv[])
 {
-	srand(static_cast<uint32_t>(time(nullptr)));
+	srand(time(nullptr));
+
+	SDL_Event event;
+	SDL_Renderer *renderer;
+	SDL_Window *window;
+	SDL_Texture *texture = NULL;
+	void *pixels;
+	Uint8 *base;
+	int pitch;
+
+	const unsigned int WINDOW_WIDTH = 500;
+	const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH;
+	unsigned int x;
+	unsigned int y;
+
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_WIDTH, 0, &window, &renderer);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, WINDOW_WIDTH, WINDOW_WIDTH);
 
 	std::thread lifeThread;
 	std::mutex mx;
@@ -55,10 +69,8 @@ int main(int argc, char* argv[])
 	lifeThread = std::thread([&life, &mx]()
 	{
 		mx.lock();
-		cout << "Hello..." << endl;
-		const size_t size = 10000;
+		const size_t size = 500;
 		life = std::make_unique<LifeCicle>(size, size);
-		cout << "Bye..." << endl;
 		mx.unlock();
 	});
 	lifeThread.detach();
@@ -78,11 +90,31 @@ int main(int argc, char* argv[])
 	{
 		if (mx.try_lock())
 		{
+			SDL_LockTexture(texture, NULL, &pixels, &pitch);
+			auto f = life->State();
+			for (x = 0; x < WINDOW_WIDTH && x<f.size(); x++) {
+				for (y = 0; y < WINDOW_HEIGHT && y<f[0].size(); y++) {
+					base = ((Uint8 *)pixels) + (4 * (x * WINDOW_WIDTH + y));
+					base[0] = f[x][y] * 255;
+					base[1] = f[x][y] * 255;
+					base[2] = f[x][y] * 255;
+					base[3] = 0;
+				}
+			}
+			SDL_UnlockTexture(texture);
+
 			mx.unlock();
 			lifeThread.swap(std::thread(worker));
 			lifeThread.detach();
 		}
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		SDL_RenderPresent(renderer);
+		if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+			break;
 	}
-	system("pause");
+
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 	return 0;
 }
