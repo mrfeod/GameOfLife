@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
 	Uint8 *base;
 	int pitch;
 
-	const unsigned int WINDOW_WIDTH = 500;
+	const unsigned int WINDOW_WIDTH = 1000;
 	const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH;
 	unsigned int x;
 	unsigned int y;
@@ -68,22 +68,17 @@ int main(int argc, char* argv[])
 	std::unique_ptr<LifeCicle> life;
 	lifeThread = std::thread([&life, &mx]()
 	{
-		mx.lock();
-		const size_t size = 500;
+		std::lock_guard<std::mutex> lock(mx);
+		const size_t size = 1000;
 		life = std::make_unique<LifeCicle>(size, size);
-		mx.unlock();
 	});
-	lifeThread.detach();
-
-	while (!mx.try_lock()) {}
-	mx.unlock();
+	lifeThread.join();
 
 	auto worker = [&life, &mx]()
 	{
-		mx.lock();
+		std::lock_guard<std::mutex> lock(mx);
 		cout << life->Step() << endl;
 		life->NextStep();
-		mx.unlock();
 	};
 
 	while (life->Alive())
@@ -92,8 +87,8 @@ int main(int argc, char* argv[])
 		{
 			SDL_LockTexture(texture, NULL, &pixels, &pitch);
 			auto f = life->State();
-			for (x = 0; x < WINDOW_WIDTH && x<f.size(); x++) {
-				for (y = 0; y < WINDOW_HEIGHT && y<f[0].size(); y++) {
+			for (x = 0; x < WINDOW_WIDTH && x < f.size(); x++) {
+				for (y = 0; y < WINDOW_HEIGHT && y < f[0].size(); y++) {
 					base = ((Uint8 *)pixels) + (4 * (x * WINDOW_WIDTH + y));
 					base[0] = f[x][y] * 255;
 					base[1] = f[x][y] * 255;
@@ -116,5 +111,9 @@ int main(int argc, char* argv[])
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+
+	while (!mx.try_lock()) {}
+	mx.unlock();
+		
 	return 0;
 }
